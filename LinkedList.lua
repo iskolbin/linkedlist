@@ -1,246 +1,261 @@
-error( 'Unimplemented' )
-
-local floor, setmetatable = math.floor, setmetatable
-
-local Nil = {}
-Nil[1] = Nil
-Nil[2] = Nil
-Nil[3] = Nil
+local assert, abs, setmetatable = assert, math.abs, setmetatable
 
 local LinkedList = {}
 
-local LinkedListMt
+local Nil = {}
+
+local LinkedListMt 
 
 function LinkedList.new( array )
-	local self = setmetatable( {
-		_size = 0,
+	local self = {
 		_head = Nil,
 		_tail = Nil,
-	}, LinkedListMt )
+		_length = 0,
+	}
 
 	if array then
-		self:pusharray( array )
-	end
-
-	return self
-end
-
-local function insertbefore( self, node, item )
-	if self._size == 0 then
-		self._head = {item, Nil, Nil}
-		self._tail = self._head
-	elseif node == self._head then
-		self._head = {item, Nil, self._head}
-		self._head[3][2] = self._head
-	else
-		node[2] = {item, node[2], node}
-		node[2][3] = node[2]
-	end
-	
-	self._size = self._size + 1
-end
-
-local function insertafter( self, node, item )
-	if self._size == 0 then
-		self._head = {item, Nil, Nil}
-		self._tail = self._head
-	elseif node == self._tail then
-		self._tail = {item, self._tail, Nil}
-		self._tail[2][3] = self._tail
-	else
-		node[3] = {item, node, node[3]}
-		node[3][2] = node[3]
-	end
-	
-	self._size = self._size + 1
-end
-
-local function remove( self, node )
-	if node ~= Nil then
-		if node == self._head and node == self._tail then
-			self._head = Nil
-			self._tail = Nil
-		elseif node == self._head then
-			self._head = self._head[3]
-			self._head[2] = Nil
-		elseif node == self._tail then
-			self._tail = self._tail[2]
-			self._tail[3] = Nil
-		else
-			node[2][3], node[3][2] = node[3], node[2]
-		end
-
-		self._size = self._size - 1
-
-		return node[1]
-	end
-end
-
-function LinkedList:insert( item_or_index, item_ )
-	local item = item_ or item_or_index
-
-	if self._size == 0 then
-		self._head = {item, Nil, Nil}
-		self._tail = self._head
-		self._size = 1
-	else
-		local index = item_ and item_or_index or -1
-		self._size = self._size + 1
-		if index > 0 then
-			local node = self._head
-			local tail = self._tail
-			for i = 1, index-1 do
-				if node[3] == tail then
-					self._tail = {item, tail, Nil}
-					tail[3] = self._tail
-					return
-				else
-					node = node[3]
-				end
+		local len = #array
+		if len > 0 then
+			local node = {array[1],Nil,Nil}
+			self._head = node
+			for i = 2, len do
+				local nextnode = {array[i],node,Nil}
+				node[3] = nextnode
+				node = nextnode
 			end
-			local prev = node[2]
-			node[2] = {item, node, prev}
-			prev[3] = node[2]
+			self._tail = node
+			self._length = len
+		end
+	end
+
+	return setmetatable( self, LinkedListMt )
+end
+
+function LinkedList:copy()
+	local result = LinkedList.new()
+	local node = self._head
+	while node ~= Nil do
+		result:insert( node[1] )
+		node = node[3]
+	end
+	return result
+end
+
+function LinkedList:insert( i_or_v, v_ )
+	assert( i_or_v ~= nil, 'wrong number of arguments to \'insert\'' )
+	local v = v_ or i_or_v
+	local i = ( v_ ~= nil ) and i_or_v or -1
+	local len = self._length
+	assert( abs(i) - 1 <= len and i ~= 0, 'bad argument #2 to \'insert\' (position out of bounds)')
+
+	if len == 0 then
+		self._length = 1
+		self._head = {v, Nil, Nil}
+		self._tail = self._head
+	else
+		if i == len+1 then
+			i = -1
+		elseif i == -len-1 then
+			i = 1
+		end
+		self._length = len + 1
+		if i > 0 then
+			local node = self._head
+			for j = 1, i-1 do
+				node = node[3]
+			end
+			local newnode = {v,node[2],node}
+			if node[2] ~= Nil then
+				node[2][3] = newnode
+			else
+				self._head = newnode
+			end	
+			node[2] = newnode
+	
 		else
 			local node = self._tail
-			local head = self._head
-			for i = 1, -index-1 do
-				if node[2] == head then
-					self._head = {item, Nil, head}
-					head[2] = self._head
-					return
-				else
-					node = node[2]
-				end
+			for j = 1, -i-1 do
+				node = node[2]
 			end
-			local nxt = node[3]
-			node[3] = {item, nxt, node}
-			nxt[2] = node[3]
+			local newnode = {v,node,node[3]}
+			if node[3] ~= Nil then
+				node[3][2] = newnode
+			else
+				self._tail = newnode
+			end	
+			node[3] = newnode
 		end
 	end
 end
 
-function LinkedList:remove( index_ )
-	if self._size == 0 then
-		return false
-	elseif self._size = 1 then
-		local item = self._head[1]
+function LinkedList:remove( i_ )
+	local i = i_ or -1
+	local len = self._length
+	assert( abs(i) <= len and i ~= 0, 'bad argument #2 to \'insert\' (position out of bounds)')
+
+	if len == 1 then
+		local v = self._head[1]
+		self._length = 0
 		self._head = Nil
 		self._tail = Nil
-		self._size = 0
-		return item
+		return v
 	else
-		local index = index_ or -1
-		self._size = self._size - 1
-		if index > 0 then
-			local node = self._head
-			local tail = self._tail
-			for i = 1, index-1 do
-				if node[3] == tail then
-					self._tail = node
-					node[3] = Nil	
-					return tail[1]
-				else
+		if i == len then
+			i = -1
+		elseif i == -len then
+			i = 1
+		end
+
+		self._length = len - 1
+
+		if i == 1 then
+			local v = self._head[1]
+			self._head = self._head[3]
+			self._head[2] = Nil
+			return v
+		elseif i == -1 then
+			local v = self._tail[1]
+			self._tail = self._tail[2]
+			self._tail[3] = Nil
+			return v
+		else
+			local node
+			
+			if i > 0 then
+				node = self._head
+				for j = 1, i-1 do
 					node = node[3]
 				end
-			end
-			local prev, nxt = node[2], node[3]
-			prev[3] = nxt
-			nxt[2] = prev
-			return node[1]
-		else
-			local node = self._tail
-			local head = self._head
-			for i = 1, -index-1 do
-				if node[2] == head then
-					self._head = {item, Nil, head}
-					head[2] = self._head
-					return
-				else
+			else
+				node = self._tail
+				for j = 1, -i-1 do
 					node = node[2]
 				end
 			end
-			local nxt = node[3]
-			node[3] = {item, nxt, node}
-			nxt[2] = node[3]
+
+			local v = node[1]
+			node[2][3], node[3][2] = node[3], node[2]
+			return v
 		end
 	end
-end
-
-function LinkedList:pushhead( item )
-	self:insert( 1, item )
-end
-
-function LinkedList:pushtail( item )
-	self:insert( item )
-end
-
-function LinkedList:pophead()
-	self:remove( 1, item )
-end
-
-function LinkedList:poptail()
-	self:remove( item )
-end
-
-function LinkedList:peekhead()
-	self._head[1]
-end
-
-function LinkedList:peektail()
-	self._tail[1]
 end
 
 function LinkedList:len()
-	return self._size
-end
-
-function LinkedList:empty()
-	return self:len() == 0
+	return self._length
 end
 
 function LinkedList:reverse()
-	if self._size > 1 then
-		local head, tail = self._head, self._tail
-		local fromhead, fromtail = head, tail
-		while fromhead ~= fromtail do
-			fromhead[1], fromtail[1] = fromtail[1], fromhead[1]
-			fromhead, fromtail = fromhead[3], fromtail[2]
+	local len = self._length
+	if len > 1 then
+		local node = self._head
+		for i = 1, len do
+			local nextnode = node[3]
+			node[2], node[3] = node[3], node[2]
+			node = nextnode
+		end
+		self._head, self._tail = self._tail, self._head
+	end
+	return self
+end
+
+function LinkedList:sub( i, j_ )
+	local len = self._length
+	assert( abs(i) <= len, 'bad argument #2 to \'sub\' (position out of bounds)')
+	local j = j_ or -1
+	assert( abs(j) <= len, 'bad argument #3 to \'sub\' (position out of bounds)')
+	local fromnode, tonode
+
+	if i > 0 then
+		fromnode = self._head
+		for i_ = 2, i do
+			fromnode = fromnode[3]
+		end
+	else
+		fromnode = self._tail
+		for i_ = 2, -i do
+			fromnode = fromnode[2]
 		end
 	end
-end
-	
--- TODO
-local function iterator( self, i )
+
+	if j > 0 then
+		tonode = self._head
+		for j_ = 2, j do
+			tonode = tonode[3]
+		end
+	else
+		tonode = self._tail
+		for j_ = 2, -j do
+			tonode = tonode[2]
+		end
+	end
+
+	local result = LinkedList.new()
+	while fromnode ~= tonode[3] do
+		result:insert( fromnode[1] )
+		fromnode = fromnode[3]
+	end
+
+	return result
 end
 
-function LinkedList:ipairs()
-	return iterator, self, 0
+function LinkedList:tostring()
+	local t, node = {}, self._head
+	for i = 1, self._length do
+		t[i], node = tostring( node[1] ), node[3]
+	end
+	return '{' .. table.concat( t, ',' ) .. '}'
 end
 
--- TODO
-function LinkedList:pusharray( array )
+function LinkedList:toarray()
+	local t, node = {}, self._head
+	for i = 1, self._length do
+		t[i], node = node[1], node[3]
+	end
+	return t
 end
 
--- Aliases
--- ECMA Script arrays
-LinkedList.shift = LinkedList.pushhead
-LinkedList.unshift = LinkedList.pophead
+function LinkedList:pushhead( v )
+	return self:insert( 1, v )
+end
 
--- Stacks, LIFO
+function LinkedList:pophead( v )
+	return self:remove( 1, v )
+end
+
+function LinkedList:pushtail( v )
+	return self:insert( -1, v )
+end
+
+function LinkedList:pophead( v )
+	return self:remove( -1, v )
+end
+
+function LinkedList:peektail()
+	assert( self._length > 0, 'list is empty' )
+	return self._tail[1]
+end
+
+function LinkedList:peekhead()
+	assert( self._length > 0, 'list is empty' )
+	return self._head[1]
+end
+
 LinkedList.push = LinkedList.pushtail
 LinkedList.pop = LinkedList.poptail
-LinkedList.peek = LinkedList.peektail
-
--- Queues, FIFO
 LinkedList.enqueue = LinkedList.pushhead
 LinkedList.dequeue = LinkedList.poptail
+LinkedList.peek = LinkedList.peektail
+LinkedList.shift = LinkedList.pushhead
+LinkedList.unshift = LinkedList.pophead
 
 LinkedListMt = {
 	__index = LinkedList,
 	__len = LinkedList.len,
+	__tostring = LinkedList.tostring,
 }
 
-return setmetatable( LinkedList, {__call = function( _, ... )
-	return LinkedList.new( ... )
-end } )
+return setmetatable( LinkedList, {
+	__call = function( _, ... )
+		return LinkedList.new( ... )
+	end
+} )
