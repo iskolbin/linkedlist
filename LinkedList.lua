@@ -41,6 +41,43 @@ function LinkedList:copy()
 	return result
 end
 
+function LinkedList:index( i )
+	local len = self._length
+	assert( abs(i) - 1 <= len and i ~= 0, 'bad argument #1 to \'index\' (position out of bounds)')
+	local node = Nil
+	if i > 0 then
+		node = self._head
+		for j = 1, i-1 do
+			node = node[3]
+		end
+	else
+		node = self._tail
+		for j = 1, -i-1 do
+			node = node[2]
+		end
+	end
+	return node[1]
+end
+
+
+function LinkedList:set( i, v )
+	local len = self._length
+	assert( abs(i) - 1 <= len and i ~= 0, 'bad argument #1 to \'index\' (position out of bounds)')
+	local node = Nil
+	if i > 0 then
+		node = self._head
+		for j = 1, i-1 do
+			node = node[3]
+		end
+	else
+		node = self._tail
+		for j = 1, -i-1 do
+			node = node[2]
+		end
+	end
+	node[1] = v
+end
+
 function LinkedList:insert( i_or_v, v_ )
 	assert( i_or_v ~= nil, 'wrong number of arguments to \'insert\'' )
 	local v = v_ or i_or_v
@@ -86,6 +123,8 @@ function LinkedList:insert( i_or_v, v_ )
 			node[3] = newnode
 		end
 	end
+
+	return self
 end
 
 function LinkedList:remove( i_ )
@@ -240,6 +279,31 @@ function LinkedList:peekhead()
 	return self._head[1]
 end
 
+local function ipairsiter( state, index )
+	local node = state[1]
+	if node ~= Nil then
+		state[1] = node[3]
+		return index + 1, node[1]
+	end
+end
+
+function LinkedList:ipairs()
+	return ipairsiter, {self._head}, 0
+end
+
+function LinkedList:merge( list )
+	local len = list._length
+	if len > 0 then
+		self._tail[3] = list._head
+		self._tail = list._tail
+		self._length = self._length + len
+		list._head = Nil
+		list._tail = Nil
+		list._length = 0
+	end
+	return self
+end
+
 LinkedList.push = LinkedList.pushtail
 LinkedList.pop = LinkedList.poptail
 LinkedList.enqueue = LinkedList.pushhead
@@ -252,6 +316,7 @@ LinkedListMt = {
 	__index = LinkedList,
 	__len = LinkedList.len,
 	__tostring = LinkedList.tostring,
+	__ipairs = LinkedList.ipairs,
 }
 
 return setmetatable( LinkedList, {
